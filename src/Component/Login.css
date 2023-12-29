@@ -1,0 +1,71 @@
+/* src/components/Login.css */
+
+/* Default styles */
+.login-container {
+    max-width: 360px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 20px;
+    background-color: black;
+    color: white;
+    height: 800px; /* Set the screen height */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  
+  .logo {
+    width: 80px; /* Adjust the width as needed */
+    margin: 0 auto; /* Center the logo */
+    margin-bottom: 10px; /* Add some spacing below the logo */
+  }
+  
+  .input-container {
+    margin-bottom: 15px;
+  }
+  
+  .input-field {
+    width: calc(100% - 40px); /* Adjust the width to match the button size */
+    padding: 10px;
+    border: none;
+    border-radius: 20px;
+    background-color: #2e2e2ea8;
+    border: 3px solid #121212db;
+    color: white;
+  }
+  /* Set placeholder text color to red */
+  .input-field::placeholder {
+    color: rgb(71, 71, 71);
+  }
+  
+  .login-button {
+    background: linear-gradient(to bottom, #05e30e, #1d5420);/* Downward gradient color */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    margin-top: 10px; /* Add some spacing above the button */
+  }
+  
+  .login-button:hover {
+    background: linear-gradient(to bottom, #05e30e, #1d5420);
+  }
+  
+  .button-link {
+    text-decoration: none;
+    color: white;
+    margin-top: 10px; /* Add some spacing above the link */
+  }
+  
+  .forgot-password-link {
+    text-decoration: none;
+    color: #13a712;
+    display: block;
+    margin-top: 10px; /* Add some spacing above the link */
+  }
+  
+  .forgot-password-link:hover {
+    text-decoration: underline;
+  }
+  
