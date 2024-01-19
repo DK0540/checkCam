@@ -1,5 +1,3 @@
-// src/components/Login.js
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "./Login.css"; // Import the CSS file
@@ -7,8 +5,6 @@ import img from "./assets/vlogo.png";
 import { v4 as uuidv4 } from "uuid";
 import HomePage from "./HomePage"; 
 import styled from "styled-components";
-
-
 
 
 
@@ -69,7 +65,7 @@ const LoginPage = () => {
 
   // Render the HomePage component if logged in
   if (isLoggedIn) {
-    return <HomePage userData={userData} device_uuid={deviceUUID} />;
+    return <HomePage username={username} userData={userData} device_uuid={deviceUUID} />;
   }
 
 

@@ -1,0 +1,21 @@
+.ftext{
+
+    color: #535353;
+
+    font-size: 15px;
+  
+    font-weight: 600;
+    margin-top: -5px;
+    font-family: 'Muli';
+    letter-spacing: 0.5px;
+}
+
+
+.ftextname{
+    font-size: 17px;
+    color: #212121;
+    font-weight: 600;
+    border-bottom: 4px solid #a7a7a77a;
+    font-family: 'Noto Sans KR', sans-serif;
+    letter-spacing: 2px;
+}
