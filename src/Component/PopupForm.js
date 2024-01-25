@@ -1,27 +1,18 @@
 import React, { useState, useEffect } from "react";
-import Camera from "react-html5-camera-photo";
 import "react-html5-camera-photo/build/css/index.css";
 import styled from "styled-components";
-import { AiOutlineCamera } from "react-icons/ai";
-import { FaFileUpload } from "react-icons/fa";
-import { MdCameraswitch } from "react-icons/md";
 import CameraView from "./CamStore/CameraView";
 import axios from "axios";
 import "./PopupForm.css";
-import BankPassbookCameraView from "./CamStore/BankPassbookCameraView";
-import ChallanCameraView from "./CamStore/ChallanCameraView";
 import FarmerSubsidyCts from "./Sections/FarmerSubsidyCts";
 import SNeftCopyCts from "./Sections/SNeftCopyCts";
 import FarmerInspectionImageCts from "./Sections/FarmerInspectionImageCts";
 import FarmerFilterImage from "./Sections/FarmerFilterImage";
 import FarmerPipeImageCts from "./Sections/FarmerPipeImageCts";
-
 import FarmerStatementCapture from "./Sections/FarmerStatementvcaptre";
-import img11 from "../Component/assets/vbnlogo2.jpg";
 import FarmerPhotoSection from "./Sections/FarmerPhotoSection";
 import BankPassbookSection from "./Sections/BankPassbookSection";
 import FarmerChallanSection from "./Sections/FarmerChallanSection";
-
 const PopupFormContainer = styled.div`
   position: fixed;
   top: 0;
@@ -74,6 +65,7 @@ const PopupForm = ({
   farmerNameTitle,
   farmerFather,
   farmerName,
+  farmerDocId,
 }) => {
   const [capturedImage, setCapturedImage] = useState(null);
   const [showCamera, setShowCamera] = useState(false);
@@ -112,14 +104,6 @@ const PopupForm = ({
     getCurrentLocation();
   };
 
-  const handleRetake = () => {
-    setShowCamera(true);
-    setCapturedImage(null);
-    setLocation(null);
-    setFarmerPhoto(null);
-    setCapturedDateTime(null); // Reset capturedDateTime when retaking the photo
-  };
-
   const handleOpenCamera = () => {
     setShowCamera(true);
   };
@@ -134,7 +118,7 @@ const PopupForm = ({
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setCapturedImage(reader.result); // Update capturedImage with the uploaded image
+        setCapturedImage(reader.result);
         getCurrentLocation();
       };
       reader.readAsDataURL(file);
@@ -221,13 +205,6 @@ const PopupForm = ({
     setBankPassbookImage(dataUri);
     setShowBankPassbookCamera(false);
     getBankPassbookLocation();
-  };
-
-  const handleBankPassbookRetake = () => {
-    setShowBankPassbookCamera(true);
-    setBankPassbookImage(null);
-    setBankPassbookLocation(null);
-    setBankPassbookCapturedDateTime(null);
   };
 
   const handleBankPassbookOpenCamera = () => {
@@ -328,21 +305,12 @@ const PopupForm = ({
     farmerNameTitle,
     bankPassbookCapturedDateTime,
   ]);
-  //===================>>end passbook section related functions
-  //====================>>functions related to farmer bank chalen section
 
   // Add these functions for the Bank Challan section
   const handleCaptureChallan = (dataUri) => {
     setChallanImage(dataUri);
     setShowChallanCamera(false);
     getCurrentChallanLocation();
-  };
-
-  const handleRetakeChallan = () => {
-    setShowChallanCamera(true);
-    setChallanImage(null);
-    setChallanLocation(null);
-    setCapturedChallanDateTime(null);
   };
 
   const handleOpenChallanCamera = () => {
@@ -446,22 +414,51 @@ const PopupForm = ({
     capturedChallanDateTime,
   ]);
 
+  ///////////////////////////////server connection
+  // console.log(farmerId);
+  // console.log(farmerDocId);
+  // console.log(token);
+  //////////////////////////////////test
   //server connection
-  // const farmerId = 7909;
-  // const farmerFieldId = 1413;
+
+  /////////////////////////////////////////////////////////////image packahe testing 2
+
+  const VIDEO_FILE_NAME = "farmer_statement_video.mp4";
+
+  const saveFormData = async (formData) => {
+    try {
+      const response = await axios.post("/api/pwa/save", formData, {
+        headers: {
+          token: token,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (response.status === 200) {
+        console.log("Images and video uploaded successfully");
+      } else {
+        console.error(
+          "Failed to upload. Server returned non-200 status:",
+          response.status
+        );
+      }
+    } catch (error) {
+      console.error("Error uploading images and video:", error.message);
+    } finally {
+      onClose();
+    }
+  };
   const handleSave = async () => {
     try {
       const formData = new FormData();
-      formData.append("farmer_id", "7909");
-      formData.append("farmer_field_id", "1809");
+      formData.append("farmer_id", farmerId);
+      formData.append("farmer_field_id", farmerDocId);
 
-      // Convert the data URI to a Blob and append to form data if not null or empty
       if (farmerPhoto) {
         const base64Data = farmerPhoto.split(",")[1];
-        const blob = b64toBlob(base64Data);
-        formData.append("farmer_photo", blob, "farmer_photo.jpg");
+        const photoBlob = b64toBlob(base64Data);
+        formData.append("farmer_photo", photoBlob, "farmer_photo.jpg");
       }
-      // Convert the bank passbook data URI to a Blob and append to form data if not null or empty
 
       if (bankPassbookImage) {
         const bankPassbookBase64 = bankPassbookImage.split(",")[1];
@@ -473,18 +470,16 @@ const PopupForm = ({
         );
       }
 
-      // Convert the data URI to a Blob and append to form data if not null or empty
       if (challanImage) {
         const base64Data = challanImage.split(",")[1];
-        const blob = b64toBlob(base64Data);
+        const blobChallan = b64toBlob(base64Data);
         formData.append(
           "farmer_bank_challan_copy",
-          blob,
+          blobChallan,
           "farmer_bank_challan_copy.jpg"
         );
       }
 
-      // Convert the data URI to a Blob and append to form data if not null or empty
       if (subsidyImage) {
         const base64Data = subsidyImage.split(",")[1];
         const blob = b64toBlob(base64Data);
@@ -531,30 +526,41 @@ const PopupForm = ({
         );
       }
 
-      if (statementImage) {
-        const base64Data = statementImage.split(",")[1];
-        const blob = b64toBlob(base64Data);
-        formData.append(
-          "farmer_statement_video",
-          blob,
-          "farmer_statement_video.jpg"
-        );
+      // ... (rest of the formData logic)
+
+      // Handle video if captured
+      if (capturedVideo) {
+        try {
+          // Convert the captured video to a Blob
+          const response = await fetch(capturedVideo);
+
+          if (!response.ok) {
+            throw new Error(
+              `Failed to fetch video. Status: ${response.status}`
+            );
+          }
+
+          const videoBlob = await response.blob();
+
+          // Log the size of the original video in kilobytes
+          const originalVideoSizeKB = videoBlob.size / 1024;
+          console.log(
+            "Original Video Size:",
+            originalVideoSizeKB.toFixed(2),
+            "KB"
+          );
+
+          // Append the original video Blob to the formData
+          formData.append("farmer_statement_video", videoBlob, VIDEO_FILE_NAME);
+        } catch (error) {
+          console.error("Error handling video:", error.message);
+        }
       }
 
-      const response = await axios.post(
-        "http://sfamsserver.in/api/pwa/save",
-        formData,
-        {
-          headers: {
-            token:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxNDEsInVzZXJfbmFtZSI6InZpc3dhbmF0aCIsImZhdGhlcl9uYW1lIjpudWxsLCJ1c2VyX2VtYWlsIjoidmlzd2FuYXRoQGdtYWlsLmNvbSIsInVzZXJfZmlyc3RfbmFtZSI6bnVsbCwidXNlcl9sYXN0X25hbWUiOm51bGwsImNvbnRhY3RfcGVyc29uX25hbWUiOm51bGwsInVzZXJfcGhvbmUiOm51bGwsInVzZXJfcm9sZSI6MSwiaXNfc3VwZXJfYWRtaW4iOjAsImlzX21ndCI6MiwiY29tcGFueV9pZCI6MSwiYWdlbnRfaWQiOjczLCJjb21wYW55X25hbWUiOiJTcmluaWRoaSBpbm5vdmF0aXZlIGluZm9zb2Z0IFB2dCBMdGQiLCJpYXQiOjE3MDUxNDc1NjEsImV4cCI6MTcwNTE5MDc2MX0.isHTWhHhD7J_x43moP6fehFPQBXku_jzmkL38BoUuDo",
-          },
-        }
-      );
-
-      console.log("Images uploaded successfully");
+      // Call the saveFormData function
+      await saveFormData(formData);
     } catch (error) {
-      console.error("Error uploading images:", error.message);
+      console.error("Error uploading images and video:", error.message);
     } finally {
       onClose();
     }
@@ -579,7 +585,6 @@ const PopupForm = ({
 
     return new Blob(byteArrays, { type: "image/jpeg" });
   };
-
   return (
     <>
       <PopupFormContainer>
@@ -721,32 +726,22 @@ const PopupForm = ({
 
 export default PopupForm;
 
-//////////////////Image upload above code//////////////////////////
-
+//////////////////////////////////////////////////////////////fixing bugs
 // import React, { useState, useEffect } from "react";
-// import Camera from "react-html5-camera-photo";
 // import "react-html5-camera-photo/build/css/index.css";
 // import styled from "styled-components";
-// import { AiOutlineCamera } from "react-icons/ai";
-// import { FaFileUpload } from "react-icons/fa";
-// import { MdCameraswitch } from "react-icons/md";
 // import CameraView from "./CamStore/CameraView";
 // import axios from "axios";
 // import "./PopupForm.css";
-// import BankPassbookCameraView from "./CamStore/BankPassbookCameraView";
-// import ChallanCameraView from "./CamStore/ChallanCameraView";
 // import FarmerSubsidyCts from "./Sections/FarmerSubsidyCts";
 // import SNeftCopyCts from "./Sections/SNeftCopyCts";
 // import FarmerInspectionImageCts from "./Sections/FarmerInspectionImageCts";
 // import FarmerFilterImage from "./Sections/FarmerFilterImage";
 // import FarmerPipeImageCts from "./Sections/FarmerPipeImageCts";
-
 // import FarmerStatementCapture from "./Sections/FarmerStatementvcaptre";
-// import img11 from "../Component/assets/vbnlogo2.jpg";
 // import FarmerPhotoSection from "./Sections/FarmerPhotoSection";
 // import BankPassbookSection from "./Sections/BankPassbookSection";
 // import FarmerChallanSection from "./Sections/FarmerChallanSection";
-
 // const PopupFormContainer = styled.div`
 //   position: fixed;
 //   top: 0;
@@ -766,12 +761,12 @@ export default PopupForm;
 //   border-radius: 8px;
 //   width: 400px;
 //   color: black;
-//   margin-top: 1180px;
+//   margin-top: 1656px;
 //   margin-bottom: 200px;
 // `;
 
 // const Button = styled.button`
-//   background-color: #3498db;
+//   background-color: #17acef;
 //   color: white;
 //   padding: 8px;
 //   border: none;
@@ -799,6 +794,7 @@ export default PopupForm;
 //   farmerNameTitle,
 //   farmerFather,
 //   farmerName,
+//   farmerDocId,
 // }) => {
 //   const [capturedImage, setCapturedImage] = useState(null);
 //   const [showCamera, setShowCamera] = useState(false);
@@ -835,14 +831,6 @@ export default PopupForm;
 
 //     // Get current location after capturing the image
 //     getCurrentLocation();
-//   };
-
-//   const handleRetake = () => {
-//     setShowCamera(true);
-//     setCapturedImage(null);
-//     setLocation(null);
-//     setFarmerPhoto(null);
-//     setCapturedDateTime(null); // Reset capturedDateTime when retaking the photo
 //   };
 
 //   const handleOpenCamera = () => {
@@ -948,13 +936,6 @@ export default PopupForm;
 //     getBankPassbookLocation();
 //   };
 
-//   const handleBankPassbookRetake = () => {
-//     setShowBankPassbookCamera(true);
-//     setBankPassbookImage(null);
-//     setBankPassbookLocation(null);
-//     setBankPassbookCapturedDateTime(null);
-//   };
-
 //   const handleBankPassbookOpenCamera = () => {
 //     setShowBankPassbookCamera(true);
 //   };
@@ -1053,21 +1034,12 @@ export default PopupForm;
 //     farmerNameTitle,
 //     bankPassbookCapturedDateTime,
 //   ]);
-//   //===================>>end passbook section related functions
-//   //====================>>functions related to farmer bank chalen section
 
 //   // Add these functions for the Bank Challan section
 //   const handleCaptureChallan = (dataUri) => {
 //     setChallanImage(dataUri);
 //     setShowChallanCamera(false);
 //     getCurrentChallanLocation();
-//   };
-
-//   const handleRetakeChallan = () => {
-//     setShowChallanCamera(true);
-//     setChallanImage(null);
-//     setChallanLocation(null);
-//     setCapturedChallanDateTime(null);
 //   };
 
 //   const handleOpenChallanCamera = () => {
@@ -1171,84 +1143,161 @@ export default PopupForm;
 //     capturedChallanDateTime,
 //   ]);
 
+//   ///////////////////////////////server connection
+//   console.log(farmerId);
+//   console.log(farmerDocId);
+//   console.log(token);
+//   //////////////////////////////////test
 //   //server connection
-//   // const handleSave = async () => {
-//   //   try {
-//   //     const formData = new FormData();
-//   //     formData.append("farmer_id", farmerId);
-//   //     formData.append("farmer_field_id", farmerFieldId);
 
-//   //     // ... (other form data)
-
-//   //     let capturedVideoFile = null;
-
-//   //     if (capturedVideo) {
-//   //       // Convert the captured video to a Blob
-//   //       const blob = await fetch(capturedVideo).then((res) => res.blob());
-//   //       // Create a File object from the Blob
-//   //       capturedVideoFile = new File([blob], "farmer_statement_video.mp4");
-//   //       formData.append("farmer_statement_video", capturedVideoFile);
-//   //     }
-
-//   //     const response = await axios.post(
-//   //       "https://sfamsserver.in/api/admin/farmer-doc/save",
-//   //       formData,
-//   //       {
-//   //         headers: {
-//   //           device_uuid: device_uuid,
-//   //           token: token,
-//   //         },
-//   //       }
-//   //     );
-
-//   //     console.log("Video uploaded successfully");
-//   //   } catch (error) {
-//   //     console.error("Error uploading video:", error.message);
-//   //   } finally {
-//   //     onClose();
-//   //   }
-//   // };
-
-//   ////////////
+//   /////////////////////////////////////////////////////////////image packahe testing 2
 //   const handleSave = async () => {
 //     try {
 //       const formData = new FormData();
 //       formData.append("farmer_id", farmerId);
-//       formData.append("farmer_field_id", farmerFieldId);
+//       formData.append("farmer_field_id", farmerDocId);
 
-//       // ... (other form data)
-
-//       let capturedVideoData = null;
-
-//       if (capturedVideo) {
-//         const videoParts = capturedVideo.split(",");
-//         if (videoParts.length === 2) {
-//           capturedVideoData = videoParts[1].replace(/\s/g, "");
-//           formData.append("farmer_statement_video", capturedVideoData);
-//         } else {
-//           console.error("Invalid captured video format");
-//         }
+//       if (farmerPhoto) {
+//         const base64Data = farmerPhoto.split(",")[1];
+//         const photoBlob = b64toBlob(base64Data);
+//         formData.append("farmer_photo", photoBlob, "farmer_photo.jpg");
 //       }
 
-//       const response = await axios.post(
-//         "https://sfamsserver.in/api/admin/farmer-doc/save",
-//         formData,
-//         {
-//           headers: {
-//             device_uuid: device_uuid,
-//             token: token,
-//           },
-//         }
-//       );
+//       //remaining
+// if (bankPassbookImage) {
+//   const bankPassbookBase64 = bankPassbookImage.split(",")[1];
+//   const bankPassbookBlob = b64toBlob(bankPassbookBase64);
+//   formData.append(
+//     "farmer_bank_passbook",
+//     bankPassbookBlob,
+//     "farmer_bank_passbook.jpg"
+//   );
+// }
 
-//       console.log("Video uploaded successfully");
+//       // Convert the data URI to a Blob and append to form data if not null or empty
+// if (challanImage) {
+//   const base64Data = challanImage.split(",")[1];
+//   const blob = b64toBlob(base64Data);
+//   formData.append(
+//     "farmer_bank_challan_copy",
+//     blob,
+//     "farmer_bank_challan_copy.jpg"
+//   );
+// }
+
+//       // Convert the data URI to a Blob and append to form data if not null or empty
+//       if (subsidyImage) {
+//         const base64Data = subsidyImage.split(",")[1];
+//         const blob = b64toBlob(base64Data);
+//         formData.append("farmer_subsidy_cts", blob, "farmer_subsidy_cts.jpg");
+//       }
+
+// if (neftCopyImage) {
+//   const base64Data = neftCopyImage.split(",")[1];
+//   const blob = b64toBlob(base64Data);
+//   formData.append(
+//     "farmer_subsidy_neft_copy",
+//     blob,
+//     "farmer_subsidy_neft_copy.jpg"
+//   );
+// }
+
+// if (fInspectionImage) {
+//   const base64Data = fInspectionImage.split(",")[1];
+//   const blob = b64toBlob(base64Data);
+//   formData.append(
+//     "farmer_pre_inspection_photo",
+//     blob,
+//     "farmer_pre_inspection_photo.jpg"
+//   );
+// }
+
+// if (farmerFilterImage) {
+//   const base64Data = farmerFilterImage.split(",")[1];
+//   const blob = b64toBlob(base64Data);
+//   formData.append(
+//     "farmer_post_inspection_photo_with_filter",
+//     blob,
+//     "farmer_post_inspection_photo_with_filter.jpg"
+//   );
+// }
+
+// if (farmerPipeImage) {
+//   const base64Data = farmerPipeImage.split(",")[1];
+//   const blob = b64toBlob(base64Data);
+//   formData.append(
+//     "farmer_post_inspection_photo_with_pipe",
+//     blob,
+//     "farmer_post_inspection_photo_with_pipe.jpg"
+//   );
+// }
+
+//       // Handle video if captured
+
+//       if (capturedVideo) {
+//         // Convert the captured video to a Blob
+//         const response = await fetch(capturedVideo);
+//         const videoBlob = await response.blob();
+
+//         // Log the size of the original video in kilobytes
+//         const originalVideoSizeKB = videoBlob.size / 1024;
+//         console.log(
+//           "Original Video Size:",
+//           originalVideoSizeKB.toFixed(2),
+//           "KB"
+//         );
+
+//         // Append the original video Blob to the formData
+//         formData.append(
+//           "farmer_statement_video",
+//           videoBlob,
+//           "farmer_statement_video.mp4"
+//         );
+//       }
+
+//       //video upload above code
+
+//       const response = await axios.post("/api/pwa/save", formData, {
+//         headers: {
+//           token: token,
+//           "Content-Type": "multipart/form-data",
+//         },
+//       });
+
+//       if (response.status === 200) {
+//         console.log("Images and video uploaded successfully");
+//       } else {
+//         console.error(
+//           "Failed to upload. Server returned non-200 status:",
+//           response.status
+//         );
+//       }
 //     } catch (error) {
-//       console.error("Error uploading video:", error.message);
+//       console.error("Error uploading images and video:", error.message);
 //     } finally {
 //       onClose();
 //     }
 //   };
 
+//   // Helper function to convert base64 to Blob
+//   const b64toBlob = (base64Data) => {
+//     const byteCharacters = atob(base64Data);
+//     const byteArrays = [];
+
+//     for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+//       const slice = byteCharacters.slice(offset, offset + 512);
+
+//       const byteNumbers = new Array(slice.length);
+//       for (let i = 0; i < slice.length; i++) {
+//         byteNumbers[i] = slice.charCodeAt(i);
+//       }
+
+//       const byteArray = new Uint8Array(byteNumbers);
+//       byteArrays.push(byteArray);
+//     }
+
+//     return new Blob(byteArrays, { type: "image/jpeg" });
+//   };
 //   return (
 //     <>
 //       <PopupFormContainer>
@@ -1390,7 +1439,7 @@ export default PopupForm;
 
 // export default PopupForm;
 
-// /////////////////working uploading video////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////old
 // import React, { useState, useEffect } from "react";
 // import Camera from "react-html5-camera-photo";
 // import "react-html5-camera-photo/build/css/index.css";
@@ -1434,12 +1483,12 @@ export default PopupForm;
 //   border-radius: 8px;
 //   width: 400px;
 //   color: black;
-//   margin-top: 1180px;
+//   margin-top: 1656px;
 //   margin-bottom: 200px;
 // `;
 
 // const Button = styled.button`
-//   background-color: #3498db;
+//   background-color: #17acef;
 //   color: white;
 //   padding: 8px;
 //   border: none;
@@ -1467,6 +1516,7 @@ export default PopupForm;
 //   farmerNameTitle,
 //   farmerFather,
 //   farmerName,
+//   farmerDocId,
 // }) => {
 //   const [capturedImage, setCapturedImage] = useState(null);
 //   const [showCamera, setShowCamera] = useState(false);
@@ -1840,82 +1890,135 @@ export default PopupForm;
 //   ]);
 
 //   //server connection
+//   //   console.log(farmerId);
+//   // console.log(farmerDocId)
+//   console.log(token);
+
 //   const handleSave = async () => {
 //     try {
 //       const formData = new FormData();
 //       formData.append("farmer_id", farmerId);
-//       formData.append("farmer_field_id", farmerFieldId);
+//       formData.append("farmer_field_id", farmerDocId);
 
-//       // ... (other form data)
+//       // Convert the data URI to a Blob and append to form data if not null or empty
+//       if (farmerPhoto) {
+//         const base64Data = farmerPhoto.split(",")[1];
+//         const blob = b64toBlob(base64Data);
+//         formData.append("farmer_photo", blob, "farmer_photo.jpg");
+//       }
+//       // Convert the bank passbook data URI to a Blob and append to form data if not null or empty
 
-//       let capturedVideoFile = null;
+// if (bankPassbookImage) {
+//   const bankPassbookBase64 = bankPassbookImage.split(",")[1];
+//   const bankPassbookBlob = b64toBlob(bankPassbookBase64);
+//   formData.append(
+//     "farmer_bank_passbook",
+//     bankPassbookBlob,
+//     "farmer_bank_passbook.jpg"
+//   );
+// }
 
-//       if (capturedVideo) {
-//         // Convert the captured video to a Blob
-//         const blob = await fetch(capturedVideo).then((res) => res.blob());
-//         // Create a File object from the Blob
-//         capturedVideoFile = new File([blob], "farmer_statement_video.mp4");
-//         formData.append("farmer_statement_video", capturedVideoFile);
+// // Convert the data URI to a Blob and append to form data if not null or empty
+// if (challanImage) {
+//   const base64Data = challanImage.split(",")[1];
+//   const blob = b64toBlob(base64Data);
+//   formData.append(
+//     "farmer_bank_challan_copy",
+//     blob,
+//     "farmer_bank_challan_copy.jpg"
+//   );
+// }
+
+// // Convert the data URI to a Blob and append to form data if not null or empty
+// if (subsidyImage) {
+//   const base64Data = subsidyImage.split(",")[1];
+//   const blob = b64toBlob(base64Data);
+//   formData.append("farmer_subsidy_cts", blob, "farmer_subsidy_cts.jpg");
+// }
+
+// if (neftCopyImage) {
+//   const base64Data = neftCopyImage.split(",")[1];
+//   const blob = b64toBlob(base64Data);
+//   formData.append(
+//     "farmer_subsidy_neft_copy",
+//     blob,
+//     "farmer_subsidy_neft_copy.jpg"
+//   );
+// }
+
+// if (fInspectionImage) {
+//   const base64Data = fInspectionImage.split(",")[1];
+//   const blob = b64toBlob(base64Data);
+//   formData.append(
+//     "farmer_pre_inspection_photo",
+//     blob,
+//     "farmer_pre_inspection_photo.jpg"
+//   );
+// }
+
+// if (farmerFilterImage) {
+//   const base64Data = farmerFilterImage.split(",")[1];
+//   const blob = b64toBlob(base64Data);
+//   formData.append(
+//     "farmer_post_inspection_photo_with_filter",
+//     blob,
+//     "farmer_post_inspection_photo_with_filter.jpg"
+//   );
+// }
+
+// if (farmerPipeImage) {
+//   const base64Data = farmerPipeImage.split(",")[1];
+//   const blob = b64toBlob(base64Data);
+//   formData.append(
+//     "farmer_post_inspection_photo_with_pipe",
+//     blob,
+//     "farmer_post_inspection_photo_with_pipe.jpg"
+//   );
+// }
+
+//       if (statementImage) {
+//         const base64Data = statementImage.split(",")[1];
+//         const blob = b64toBlob(base64Data);
+//         formData.append(
+//           "farmer_statement_video",
+//           blob,
+//           "farmer_statement_video.jpg"
+//         );
 //       }
 
-//       const response = await axios.post(
-//         "https://sfamsserver.in/api/admin/farmer-doc/save",
-//         formData,
-//         {
-//           headers: {
-//             device_uuid: device_uuid,
-//             token: token,
-//           },
-//         }
-//       );
+//       const response = await axios.post("apiurl", formData, {
+//         headers: {
+//           token: token,
+//         },
+//       });
 
-//       console.log("Video uploaded successfully");
+//       console.log("Images uploaded successfully");
 //     } catch (error) {
-//       console.error("Error uploading video:", error.message);
+//       console.error("Error uploading images:", error.message);
 //     } finally {
 //       onClose();
 //     }
 //   };
 
-//   ////////////
-//   // const handleSave = async () => {
-//   //   try {
-//   //     const formData = new FormData();
-//   //     formData.append("farmer_id", farmerId);
-//   //     formData.append("farmer_field_id", farmerFieldId);
+//   // Helper function to convert base64 to Blob
+//   const b64toBlob = (base64Data) => {
+//     const byteCharacters = atob(base64Data);
+//     const byteArrays = [];
 
-//   //     // ... (other form data)
+//     for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+//       const slice = byteCharacters.slice(offset, offset + 512);
 
-//   //     let capturedVideoData = null;
+//       const byteNumbers = new Array(slice.length);
+//       for (let i = 0; i < slice.length; i++) {
+//         byteNumbers[i] = slice.charCodeAt(i);
+//       }
 
-//   //     if (capturedVideo) {
-//   //       const videoParts = capturedVideo.split(",");
-//   //       if (videoParts.length === 2) {
-//   //         capturedVideoData = videoParts[1].replace(/\s/g, "");
-//   //         formData.append("farmer_statement_video", capturedVideoData);
-//   //       } else {
-//   //         console.error("Invalid captured video format");
-//   //       }
-//   //     }
+//       const byteArray = new Uint8Array(byteNumbers);
+//       byteArrays.push(byteArray);
+//     }
 
-//   //     const response = await axios.post(
-//   //       "https://sfamsserver.in/api/admin/farmer-doc/save",
-//   //       formData,
-//   //       {
-//   //         headers: {
-//   //           device_uuid: device_uuid,
-//   //           token: token,
-//   //         },
-//   //       }
-//   //     );
-
-//   //     console.log("Video uploaded successfully");
-//   //   } catch (error) {
-//   //     console.error("Error uploading video:", error.message);
-//   //   } finally {
-//   //     onClose();
-//   //   }
-//   // };
+//     return new Blob(byteArrays, { type: "image/jpeg" });
+//   };
 
 //   return (
 //     <>

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import styled from "styled-components";
-import { MdCameraswitch } from "react-icons/md";
+
 const StatementCameraViewContainer = styled.div`
   position: fixed;
   top: 0;
@@ -12,28 +12,11 @@ const StatementCameraViewContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end; /* Center content vertically and align it to the bottom */
+  justify-content: flex-end;
 `;
 
 const CaptureSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   margin-top: 20px;
-`;
-
-const Timer = styled.span`
-  font-size: ${(props) => (props.recording ? "30px" : "18px")};
-  margin-top: ${(props) => (props.isWhite ? "20px" : "10px")};
-  color: ${(props) => (props.isWhite ? "white" : "red")};
-  position: absolute;
-  right: 76px;
-  top: 117px;
-`;
-
-const ButtonsContainer = styled.div`
-  display: flex;
-  margin-top: 10px;
 `;
 
 const Button = styled.button`
@@ -53,51 +36,9 @@ const StatementCameraView = ({ onCapture, onClose }) => {
   const [recording, setRecording] = useState(false);
   const [mediaStream, setMediaStream] = useState(null);
   const [capturedVideo, setCapturedVideo] = useState(null);
-  const [elapsedTime, setElapsedTime] = useState(60);
-  const [facingMode, setFacingMode] = useState("environment"); // Added state for facing mode
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
-
-  const initializeCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facingMode }, // Use facingMode state
-      });
-      setMediaStream(stream);
-      videoRef.current.srcObject = stream;
-    } catch (error) {
-      console.error("Error accessing camera:", error);
-    }
-  };
-
-  useEffect(() => {
-    initializeCamera();
-
-    return () => {
-      if (mediaStream) {
-        mediaStream.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, [facingMode]);
-
-  useEffect(() => {
-    let interval;
-
-    if (recording) {
-      interval = setInterval(() => {
-        setElapsedTime((prevTime) => prevTime - 1);
-
-        if (elapsedTime <= 0) {
-          stopRecording();
-        }
-      }, 1000);
-    }
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [recording, elapsedTime]);
 
   const startRecording = () => {
     if (mediaStream) {
@@ -120,16 +61,6 @@ const StatementCameraView = ({ onCapture, onClose }) => {
     }
   };
 
-  // const stopRecording = () => {
-  //   if (
-  //     mediaRecorderRef.current &&
-  //     mediaRecorderRef.current.state !== "inactive"
-  //   ) {
-  //     mediaRecorderRef.current.stop();
-  //     setRecording(false);
-  //   }
-  // };
-
   const stopRecording = () => {
     if (
       mediaRecorderRef.current &&
@@ -137,17 +68,34 @@ const StatementCameraView = ({ onCapture, onClose }) => {
     ) {
       mediaRecorderRef.current.stop();
       setRecording(false);
-
-      const blob = new Blob(chunksRef.current, { type: "video/mp4" });
-      setCapturedVideo(URL.createObjectURL(blob));
-      chunksRef.current = [];
     }
   };
 
-  if (elapsedTime < 1) {
-    stopRecording();
-  }
+  const toggleCamera = async () => {
+    if (mediaStream) {
+      mediaStream.getTracks().forEach((track) => track.stop());
+    }
 
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setMediaStream(stream);
+      videoRef.current.srcObject = stream;
+    } catch (error) {
+      console.error("Error accessing camera:", error);
+    }
+  };
+
+  const retakeVideo = () => {
+    setCapturedVideo(null);
+    startRecording(); // Automatically start recording again
+  };
+
+  // const saveVideo = () => {
+  //   if (capturedVideo) {
+  //     onCapture(capturedVideo);
+  //     onClose();
+  //   }
+  // };
   const saveVideo = () => {
     if (
       mediaRecorderRef.current &&
@@ -161,6 +109,8 @@ const StatementCameraView = ({ onCapture, onClose }) => {
       const blob = new Blob(chunksRef.current, { type: "video/mp4" });
       setCapturedVideo(URL.createObjectURL(blob));
       chunksRef.current = [];
+      console.log("Blob created:", blob);
+      console.log("Captured Video URL (before onCapture):", capturedVideo);
     }
 
     if (capturedVideo) {
@@ -170,52 +120,30 @@ const StatementCameraView = ({ onCapture, onClose }) => {
     }
   };
 
-  const retakeVideo = () => {
-    setCapturedVideo(null);
-    setElapsedTime(60);
-    initializeCamera();
-  };
-
-  const toggleFacingMode = () => {
-    setFacingMode((prevMode) =>
-      prevMode === "environment" ? "user" : "environment"
-    );
-  };
-
   return (
     <StatementCameraViewContainer>
       {capturedVideo ? (
         <CaptureSection>
           <VideoPreview controls src={capturedVideo} />
-          <ButtonsContainer>
-            <Button onClick={retakeVideo}>Retake</Button>
-            <Button onClick={saveVideo}>Save</Button>
-          </ButtonsContainer>
+          <Button onClick={retakeVideo}>Retake</Button>
+          <Button onClick={saveVideo}>Save</Button>
         </CaptureSection>
       ) : (
-        <CaptureSection>
-          {recording && (
-            <>
-              <Timer
-                recording={recording}
-                isWhite={elapsedTime >= 10}
-              >{`${elapsedTime}`}</Timer>
-
-              <ButtonsContainer>
-                <Button onClick={stopRecording}>Stop Recording</Button>
-              </ButtonsContainer>
-            </>
-          )}
-          {!recording && (
-            <Button onClick={startRecording} disabled={!mediaStream}>
-              Start Recording
-            </Button>
-          )}
+        <>
+          {!recording && <Button onClick={toggleCamera}>Toggle Camera</Button>}
+          <CaptureSection>
+            {!recording && (
+              <Button onClick={startRecording} disabled={!mediaStream}>
+                Start Recording
+              </Button>
+            )}
+            {recording && (
+              <Button onClick={stopRecording}>Stop Recording</Button>
+            )}
+            {recording && <span>Recording...</span>}
+          </CaptureSection>
           <VideoPreview ref={videoRef} autoPlay playsInline muted />
-          <Button className="cambtn1" onClick={toggleFacingMode}>
-            <MdCameraswitch />
-          </Button>
-        </CaptureSection>
+        </>
       )}
       <Button className="closeBtn" onClick={onClose}>
         Close
@@ -226,235 +154,7 @@ const StatementCameraView = ({ onCapture, onClose }) => {
 
 export default StatementCameraView;
 
-/////////////////////////////////////////////////////////////fixing bugs
-// import React, { useState, useEffect, useRef } from "react";
-// import styled from "styled-components";
-// import { MdCameraswitch } from "react-icons/md";
-// const StatementCameraViewContainer = styled.div`
-//   position: fixed;
-//   top: 0;
-//   left: 0;
-//   width: 100%;
-//   height: 100%;
-//   background-color: #000;
-//   z-index: 1000;
-//   display: flex;
-//   flex-direction: column;
-//   align-items: center;
-//   justify-content: flex-end; /* Center content vertically and align it to the bottom */
-// `;
-
-// const CaptureSection = styled.div`
-//   display: flex;
-//   flex-direction: column;
-//   align-items: center;
-//   margin-top: 20px;
-// `;
-
-// const Timer = styled.span`
-//   font-size: ${(props) => (props.recording ? "30px" : "18px")};
-//   margin-top: ${(props) => (props.isWhite ? "20px" : "10px")};
-//   color: ${(props) => (props.isWhite ? "white" : "red")};
-//   position: absolute;
-//   right: 76px;
-//   top: 117px;
-// `;
-
-// const ButtonsContainer = styled.div`
-//   display: flex;
-//   margin-top: 10px;
-// `;
-
-// const Button = styled.button`
-//   margin: 5px;
-//   padding: 10px;
-//   background-color: #3498db;
-//   color: #fff;
-//   border: none;
-//   cursor: pointer;
-// `;
-
-// const VideoPreview = styled.video`
-//   margin-top: 10px;
-// `;
-
-// const StatementCameraView = ({ onCapture, onClose }) => {
-//   const [recording, setRecording] = useState(false);
-//   const [mediaStream, setMediaStream] = useState(null);
-//   const [capturedVideo, setCapturedVideo] = useState(null);
-//   const [elapsedTime, setElapsedTime] = useState(60);
-//   const [facingMode, setFacingMode] = useState("environment"); // Added state for facing mode
-//   const videoRef = useRef(null);
-//   const mediaRecorderRef = useRef(null);
-//   const chunksRef = useRef([]);
-
-//   const initializeCamera = async () => {
-//     try {
-//       const stream = await navigator.mediaDevices.getUserMedia({
-//         video: { facingMode: facingMode }, // Use facingMode state
-//       });
-//       setMediaStream(stream);
-//       videoRef.current.srcObject = stream;
-//     } catch (error) {
-//       console.error("Error accessing camera:", error);
-//     }
-//   };
-
-//   useEffect(() => {
-//     initializeCamera();
-
-//     return () => {
-//       if (mediaStream) {
-//         mediaStream.getTracks().forEach((track) => track.stop());
-//       }
-//     };
-//   }, [facingMode]);
-
-//   useEffect(() => {
-//     let interval;
-
-//     if (recording) {
-//       interval = setInterval(() => {
-//         setElapsedTime((prevTime) => prevTime - 1);
-
-//         if (elapsedTime <= 0) {
-//           stopRecording();
-//         }
-//       }, 1000);
-//     }
-
-//     return () => {
-//       clearInterval(interval);
-//     };
-//   }, [recording, elapsedTime]);
-
-//   const startRecording = () => {
-//     if (mediaStream) {
-//       mediaRecorderRef.current = new MediaRecorder(mediaStream);
-
-//       mediaRecorderRef.current.ondataavailable = (event) => {
-//         if (event.data.size > 0) {
-//           chunksRef.current.push(event.data);
-//         }
-//       };
-
-//       mediaRecorderRef.current.onstop = () => {
-//         const blob = new Blob(chunksRef.current, { type: "video/mp4" });
-//         setCapturedVideo(URL.createObjectURL(blob));
-//         chunksRef.current = [];
-//       };
-
-//       mediaRecorderRef.current.start();
-//       setRecording(true);
-//     }
-//   };
-
-//   // const stopRecording = () => {
-//   //   if (
-//   //     mediaRecorderRef.current &&
-//   //     mediaRecorderRef.current.state !== "inactive"
-//   //   ) {
-//   //     mediaRecorderRef.current.stop();
-//   //     setRecording(false);
-//   //   }
-//   // };
-
-//   const stopRecording = () => {
-//     if (
-//       mediaRecorderRef.current &&
-//       mediaRecorderRef.current.state !== "inactive"
-//     ) {
-//       mediaRecorderRef.current.stop();
-//       setRecording(false);
-
-//       // const blob = new Blob(chunksRef.current, { type: "video/mp4" });
-//       // setCapturedVideo(URL.createObjectURL(blob));
-//       // chunksRef.current = [];
-//     }
-//   };
-//   if (elapsedTime < 1) {
-//     stopRecording();
-//   }
-
-//   const saveVideo = () => {
-//     if (
-//       mediaRecorderRef.current &&
-//       mediaRecorderRef.current.state === "recording"
-//     ) {
-//       mediaRecorderRef.current.stop();
-//       setRecording(false);
-//     }
-
-//     if (chunksRef.current.length > 0) {
-//       const blob = new Blob(chunksRef.current, { type: "video/mp4" });
-//       setCapturedVideo(URL.createObjectURL(blob));
-//       chunksRef.current = [];
-//     }
-
-//     if (capturedVideo) {
-//       onCapture(capturedVideo);
-//       onClose();
-//       console.log("Captured Video URL (after onCapture):", capturedVideo);
-//     }
-//   };
-
-//   const retakeVideo = () => {
-//     setCapturedVideo(null);
-//     setElapsedTime(60);
-//     initializeCamera();
-//   };
-
-//   const toggleFacingMode = () => {
-//     setFacingMode((prevMode) =>
-//       prevMode === "environment" ? "user" : "environment"
-//     );
-//   };
-
-//   return (
-//     <StatementCameraViewContainer>
-//       {capturedVideo ? (
-//         <CaptureSection>
-//           <VideoPreview controls src={capturedVideo} />
-//           <ButtonsContainer>
-//             <Button onClick={retakeVideo}>Retake</Button>
-//             <Button onClick={saveVideo}>Save</Button>
-//           </ButtonsContainer>
-//         </CaptureSection>
-//       ) : (
-//         <CaptureSection>
-//           {recording && (
-//             <>
-//               <Timer
-//                 recording={recording}
-//                 isWhite={elapsedTime >= 10}
-//               >{`${elapsedTime}`}</Timer>
-
-//               <ButtonsContainer>
-//                 <Button onClick={stopRecording}>Stop Recording</Button>
-//               </ButtonsContainer>
-//             </>
-//           )}
-//           {!recording && (
-//             <Button onClick={startRecording} disabled={!mediaStream}>
-//               Start Recording
-//             </Button>
-//           )}
-//           <VideoPreview ref={videoRef} autoPlay playsInline muted />
-//           <Button className="cambtn1" onClick={toggleFacingMode}>
-//             <MdCameraswitch />
-//           </Button>
-//         </CaptureSection>
-//       )}
-//       <Button className="closeBtn" onClick={onClose}>
-//         Close
-//       </Button>
-//     </StatementCameraViewContainer>
-//   );
-// };
-
-// export default StatementCameraView;
-
-//////////////////////////////////////////////////////////////////all are good200%
+/////////////////////////////////////new
 // import React, { useState, useEffect, useRef } from "react";
 // import styled from "styled-components";
 
@@ -469,7 +169,7 @@ export default StatementCameraView;
 //   display: flex;
 //   flex-direction: column;
 //   align-items: center;
-//   justify-content: flex-end; /* Center content vertically and align it to the bottom */
+//   justify-content: center; /* Center content vertically and horizontally */
 // `;
 
 // const CaptureSection = styled.div`
@@ -481,7 +181,7 @@ export default StatementCameraView;
 
 // const Timer = styled.span`
 //   font-size: ${(props) => (props.recording ? "30px" : "18px")};
-//   margin-top: ${(props) => (props.isWhite ? "20px" : "10px")};
+//   margin-top: ${(props) => (props.recording ? "20px" : "10px")};
 //   color: ${(props) => (props.isWhite ? "white" : "red")};
 // `;
 
@@ -573,16 +273,6 @@ export default StatementCameraView;
 //     }
 //   };
 
-//   // const stopRecording = () => {
-//   //   if (
-//   //     mediaRecorderRef.current &&
-//   //     mediaRecorderRef.current.state !== "inactive"
-//   //   ) {
-//   //     mediaRecorderRef.current.stop();
-//   //     setRecording(false);
-//   //   }
-//   // };
-
 //   const stopRecording = () => {
 //     if (
 //       mediaRecorderRef.current &&
@@ -590,12 +280,9 @@ export default StatementCameraView;
 //     ) {
 //       mediaRecorderRef.current.stop();
 //       setRecording(false);
-
-//       const blob = new Blob(chunksRef.current, { type: "video/mp4" });
-//       setCapturedVideo(URL.createObjectURL(blob));
-//       chunksRef.current = [];
 //     }
 //   };
+
 //   if (elapsedTime < 1) {
 //     stopRecording();
 //   }
@@ -618,14 +305,21 @@ export default StatementCameraView;
 //     if (capturedVideo) {
 //       onCapture(capturedVideo);
 //       onClose();
-//       console.log("Captured Video URL (after onCapture):", capturedVideo);
 //     }
 //   };
 
-//   const retakeVideo = () => {
+//   const retakeVideo = async () => {
 //     setCapturedVideo(null);
-//     setElapsedTime(60);
-//     initializeCamera();
+//     // Automatically start recording again
+
+//     setElapsedTime(60); // Reset elapsed time
+
+//     if (mediaStream) {
+//       mediaStream.getTracks().forEach((track) => track.stop());
+//     }
+
+//     await initializeCamera();
+//     startRecording();
 //   };
 
 //   return (
@@ -640,24 +334,26 @@ export default StatementCameraView;
 //         </CaptureSection>
 //       ) : (
 //         <CaptureSection>
+//           <VideoPreview ref={videoRef} autoPlay playsInline muted />
+//           <ButtonsContainer>
+//             {!recording && (
+//               <Button onClick={startRecording} disabled={!mediaStream}>
+//                 Start Recording
+//               </Button>
+//             )}
+//           </ButtonsContainer>
+
 //           {recording && (
 //             <>
 //               <Timer
-//                 recording={recording}
+//                 recording
 //                 isWhite={elapsedTime >= 10}
 //               >{`${elapsedTime}`}</Timer>
-
 //               <ButtonsContainer>
 //                 <Button onClick={stopRecording}>Stop Recording</Button>
 //               </ButtonsContainer>
 //             </>
 //           )}
-//           {!recording && (
-//             <Button onClick={startRecording} disabled={!mediaStream}>
-//               Start Recording
-//             </Button>
-//           )}
-//           <VideoPreview ref={videoRef} autoPlay playsInline muted />
 //         </CaptureSection>
 //       )}
 //       <Button className="closeBtn" onClick={onClose}>
@@ -669,7 +365,7 @@ export default StatementCameraView;
 
 // export default StatementCameraView;
 
-//////////////////////////////////////////////////////////////////================>>>>>
+//////////////////////////////////////////////////////////////////
 // import React, { useState, useEffect, useRef } from "react";
 // import styled from "styled-components";
 
@@ -1599,12 +1295,12 @@ export default StatementCameraView;
 
 //   return (
 //     <StatementCameraViewContainer>
-// {capturedVideo ? (
-//   <CaptureSection>
-//     <VideoPreview controls src={capturedVideo} />
-//     <Button onClick={retakeVideo}>Retake</Button>
-//     <Button onClick={saveVideo}>Save</Button>
-//   </CaptureSection>
+//       {capturedVideo ? (
+//         <CaptureSection>
+//           <VideoPreview controls src={capturedVideo} />
+//           <Button onClick={retakeVideo}>Retake</Button>
+//           <Button onClick={saveVideo}>Save</Button>
+//         </CaptureSection>
 //       ) : (
 //         <CaptureSection>
 //           {recording && (

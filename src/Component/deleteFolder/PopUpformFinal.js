@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Camera from "react-html5-camera-photo";
+
 import "react-html5-camera-photo/build/css/index.css";
 import styled from "styled-components";
 import { AiOutlineCamera } from "react-icons/ai";
@@ -21,7 +22,7 @@ import img11 from "../Component/assets/vbnlogo2.jpg";
 import FarmerPhotoSection from "./Sections/FarmerPhotoSection";
 import BankPassbookSection from "./Sections/BankPassbookSection";
 import FarmerChallanSection from "./Sections/FarmerChallanSection";
-
+import ImageConversion from "image-conversion";
 const PopupFormContainer = styled.div`
   position: fixed;
   top: 0;
@@ -41,12 +42,12 @@ const PopupFormContent = styled.div`
   border-radius: 8px;
   width: 400px;
   color: black;
-  margin-top: 1180px;
+  margin-top: 1656px;
   margin-bottom: 200px;
 `;
 
 const Button = styled.button`
-  background-color: #3498db;
+  background-color: #17acef;
   color: white;
   padding: 8px;
   border: none;
@@ -74,6 +75,7 @@ const PopupForm = ({
   farmerNameTitle,
   farmerFather,
   farmerName,
+  farmerDocId,
 }) => {
   const [capturedImage, setCapturedImage] = useState(null);
   const [showCamera, setShowCamera] = useState(false);
@@ -446,123 +448,500 @@ const PopupForm = ({
     capturedChallanDateTime,
   ]);
 
+  ///////////////////////////////server connection
+  console.log(farmerId);
+  console.log(farmerDocId);
+  console.log(token);
+  //////////////////////////////////test
   //server connection
-  const handleSave = async () => {
-    try {
-      let capturedVideoFile = null;
 
-      // Check if capturedVideo is a URL, fetch it as a Blob
-      if (typeof capturedVideo === "string") {
-        const response = await fetch(capturedVideo);
-        const videoBlob = await response.blob();
-
-        // Log the size of the captured video
-        const videoSizeInMB = videoBlob.size / (1024 * 1024);
-        console.log("Captured Video Size:", videoSizeInMB, "MB");
-
-        if (videoSizeInMB > 20) {
-          // Compress the video before uploading
-          const compressedBlob = await compressVideo(videoBlob);
-          // Create a File object from the compressed Blob
-          capturedVideoFile = new File(
-            [compressedBlob],
-            "farmer_statement_video.mp4"
-          );
-        } else {
-          capturedVideoFile = videoBlob;
-        }
-      } else if (capturedVideo instanceof Blob) {
-        capturedVideoFile = capturedVideo;
-      } else {
-        console.error("Invalid captured video format");
-        return;
-      }
-
-      // Use axios to upload the video file in chunks
-      const CHUNK_SIZE = 1024 * 1024; // 1MB chunks (adjust as needed)
-      const totalChunks = Math.ceil(capturedVideoFile.size / CHUNK_SIZE);
-
-      for (let chunkNumber = 0; chunkNumber < totalChunks; chunkNumber++) {
-        const start = chunkNumber * CHUNK_SIZE;
-        const end = Math.min(start + CHUNK_SIZE, capturedVideoFile.size);
-        const chunk = capturedVideoFile.slice(start, end);
-
-        // Create a new FormData object for each chunk
-        const formData = new FormData();
-        formData.append("farmer_id", farmerId);
-        formData.append("farmer_field_id", farmerFieldId);
-        formData.append("chunk", chunk);
-        formData.append("totalChunks", totalChunks);
-        formData.append("chunkNumber", chunkNumber);
-
-        // Make a chunked upload request
-        await axios.post(
-          "https://sfamsserver.in/api/admin/farmer-doc/save",
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              device_uuid: device_uuid,
-              token: token,
-            },
-            onUploadProgress: (progressEvent) => {
-              const percentage = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              );
-              console.log("Upload Progress:", percentage, "%");
-            },
-          }
-        );
-      }
-
-      console.log("Upload Complete");
-    } catch (error) {
-      console.error("Error uploading video:", error.message);
-      console.error("Server response:", error.response);
-      alert("Error uploading video. Please try again.");
-    }
-  };
-
-  ////////////
   // const handleSave = async () => {
   //   try {
   //     const formData = new FormData();
   //     formData.append("farmer_id", farmerId);
-  //     formData.append("farmer_field_id", farmerFieldId);
+  //     formData.append("farmer_field_id", farmerDocId);
 
-  //     // ... (other form data)
+  //     if (farmerPhoto) {
+  //       const base64Data = farmerPhoto.split(",")[1];
+  //       const photoBlob = b64toBlob(base64Data);
+  //       formData.append("farmer_photo", photoBlob, "farmer_photo.jpg");
+  //     }
 
-  //     let capturedVideoData = null;
+  //     // Handle video if captured
+  //     if (capturedVideo) {
+  //       // Create a Blob from the video URL
+  //       const response = await fetch(capturedVideo);
+  //       const videoBlob = await response.blob();
 
   // if (capturedVideo) {
-  //   const videoParts = capturedVideo.split(",");
-  //   if (videoParts.length === 2) {
-  //     capturedVideoData = videoParts[1].replace(/\s/g, "");
-  //     formData.append("farmer_statement_video", capturedVideoData);
-  //   } else {
-  //     console.error("Invalid captured video format");
-  //   }
+  //   // Convert the captured video to a Blob
+  //   const blob = await fetch(capturedVideo).then((res) => res.blob());
+  //   // Create a File object from the Blob
+  //   capturedVideoFile = new File([blob], "farmer_statement_video.mp4");
+  //   formData.append("farmer_statement_video", capturedVideoFile);
   // }
 
-  //     const response = await axios.post(
-  //       "https://sfamsserver.in/api/admin/farmer-doc/save",
-  //       formData,
-  //       {
-  //         headers: {
-  //           device_uuid: device_uuid,
-  //           token: token,
-  //         },
-  //       }
-  //     );
+  //       // Log the size of the video Blob
+  //       console.log(
+  //         "Video size:",
+  //         (videoBlob.size / (1024 * 1024)).toFixed(2),
+  //         "MB"
+  //       );
 
-  //     console.log("Video uploaded successfully");
+  //       console.log("Video size:", (videoBlob.size / 1024).toFixed(2), "KB");
+
+  //       formData.append(
+  //         "farmer_statement_video",
+  //         videoBlob,
+  //         "farmer_statement_video.mp4"
+  //       );
+  //     }
+
+  //     const response = await axios.post("/api/pwa/save", formData, {
+  //       headers: {
+  //         token: token,
+  //         "Content-Type": "multipart/form-data",
+  //       },
+  //     });
+
+  //     if (response.status === 200) {
+  //       console.log("Images and video uploaded successfully");
+  //     } else {
+  //       console.error(
+  //         "Failed to upload. Server returned non-200 status:",
+  //         response.status
+  //       );
+  //     }
   //   } catch (error) {
-  //     console.error("Error uploading video:", error.message);
+  //     console.error("Error uploading images and video:", error.message);
   //   } finally {
   //     onClose();
   //   }
   // };
 
+  /////////////////////////////////////////////////////////////image packahe testing 2
+  const handleSave = async () => {
+    try {
+      const formData = new FormData();
+      formData.append("farmer_id", farmerId);
+      formData.append("farmer_field_id", farmerDocId);
+
+      if (farmerPhoto) {
+        const base64Data = farmerPhoto.split(",")[1];
+        const photoBlob = b64toBlob(base64Data);
+        formData.append("farmer_photo", photoBlob, "farmer_photo.jpg");
+      }
+
+      // Handle video if captured
+      // if (capturedVideo) {
+      //   // Convert the captured video to a Blob
+      //   const response = await fetch(capturedVideo);
+      //   const videoBlob = await response.blob();
+
+      //   // Log the size of the original video in kilobytes
+      //   const originalVideoSizeKB = videoBlob.size / 1024;
+      //   console.log(
+      //     "Original Video Size:",
+      //     originalVideoSizeKB.toFixed(2),
+      //     "KB"
+      //   );
+
+      //   // Check if video size is greater than 1000 KB
+      //   if (originalVideoSizeKB > 1000) {
+      //     // Compress the video Blob using image-conversion
+      //     const compressedVideoBlob = await ImageConversion.compress({
+      //       blob: videoBlob,
+      //       quality: 0.6, // Adjust quality as needed
+      //       maxSizeMB: 0.8, // Set maximum size to 800 KB
+      //     });
+
+      //     // Log the size of the compressed video in kilobytes
+      //     const compressedVideoSizeKB = compressedVideoBlob.size / 1024;
+      //     console.log(
+      //       "Compressed Video Size:",
+      //       compressedVideoSizeKB.toFixed(2),
+      //       "KB"
+      //     );
+
+      //     formData.append(
+      //       "farmer_statement_video",
+      //       compressedVideoBlob,
+      //       "farmer_statement_video.mp4"
+      //     );
+      //   } else {
+      //     // If video size is less than or equal to 1000 KB, use the original Blob
+      //     formData.append(
+      //       "farmer_statement_video",
+      //       videoBlob,
+      //       "farmer_statement_video.mp4"
+      //     );
+      //   }
+      // }
+      //for video upload code
+      if (capturedVideo) {
+        // Convert the captured video to a Blob
+        const response = await fetch(capturedVideo);
+        const videoBlob = await response.blob();
+
+        // Log the size of the original video in kilobytes
+        const originalVideoSizeKB = videoBlob.size / 1024;
+        console.log(
+          "Original Video Size:",
+          originalVideoSizeKB.toFixed(2),
+          "KB"
+        );
+
+        // Append the original video Blob to the formData
+        formData.append(
+          "farmer_statement_video",
+          videoBlob,
+          "farmer_statement_video.mp4"
+        );
+      }
+
+      //video upload above code
+
+      const response = await axios.post("/api/pwa/save", formData, {
+        headers: {
+          token: token,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (response.status === 200) {
+        console.log("Images and video uploaded successfully");
+      } else {
+        console.error(
+          "Failed to upload. Server returned non-200 status:",
+          response.status
+        );
+      }
+    } catch (error) {
+      console.error("Error uploading images and video:", error.message);
+    } finally {
+      onClose();
+    }
+  };
+
+  /////////////////////////////////////////////////////////image package on testing
+  // const handleSave = async () => {
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append("farmer_id", farmerId);
+  //     formData.append("farmer_field_id", farmerDocId);
+
+  //     if (farmerPhoto) {
+  //       const base64Data = farmerPhoto.split(",")[1];
+  //       const photoBlob = b64toBlob(base64Data);
+  //       formData.append("farmer_photo", photoBlob, "farmer_photo.jpg");
+  //     }
+
+  //     // Handle video if captured
+  //     if (capturedVideo) {
+  //       // Convert the captured video to a Blob
+  //       const response = await fetch(capturedVideo);
+  //       const videoBlob = await response.blob();
+
+  //       // Log the size of the original video in kilobytes
+  //       const originalVideoSizeKB = videoBlob.size / 1024;
+  //       console.log(
+  //         "Original Video Size:",
+  //         originalVideoSizeKB.toFixed(2),
+  //         "KB"
+  //       );
+
+  //       // Check if video size is greater than 1MB
+  //       if (originalVideoSizeKB > 1024) {
+  //         // Compress the video Blob using image-conversion
+  //         const compressedVideoBlob = await ImageConversion.compress({
+  //           blob: videoBlob,
+  //           quality: 0.6, // Adjust quality as needed
+  //           maxSizeMB: 0.9, // Set maximum size to 900 KB
+  //         });
+
+  //         // Log the size of the compressed video in kilobytes
+  //         const compressedVideoSizeKB = compressedVideoBlob.size / 1024;
+  //         console.log(
+  //           "Compressed Video Size:",
+  //           compressedVideoSizeKB.toFixed(2),
+  //           "KB"
+  //         );
+
+  //         formData.append(
+  //           "farmer_statement_video",
+  //           compressedVideoBlob,
+  //           "farmer_statement_video.mp4"
+  //         );
+  //       } else {
+  //         // If video size is less than or equal to 1MB, use the original Blob
+  //         formData.append(
+  //           "farmer_statement_video",
+  //           videoBlob,
+  //           "farmer_statement_video.mp4"
+  //         );
+  //       }
+  //     }
+
+  //     const response = await axios.post("/api/pwa/save", formData, {
+  //       headers: {
+  //         token: token,
+  //         "Content-Type": "multipart/form-data",
+  //       },
+  //     });
+
+  //     if (response.status === 200) {
+  //       console.log("Images and video uploaded successfully");
+  //     } else {
+  //       console.error(
+  //         "Failed to upload. Server returned non-200 status:",
+  //         response.status
+  //       );
+  //     }
+  //   } catch (error) {
+  //     console.error("Error uploading images and video:", error.message);
+  //   } finally {
+  //     onClose();
+  //   }
+  // };
+
+  ////////////////////////////////////////////imagepackaged used below is working
+
+  // const handleSave = async () => {
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append("farmer_id", farmerId);
+  //     formData.append("farmer_field_id", farmerDocId);
+
+  //     if (farmerPhoto) {
+  //       const base64Data = farmerPhoto.split(",")[1];
+  //       const photoBlob = b64toBlob(base64Data);
+  //       formData.append("farmer_photo", photoBlob, "farmer_photo.jpg");
+  //     }
+
+  //     // Handle video if captured
+  //     if (capturedVideo) {
+  //       // Convert the captured video to a Blob
+  //       const response = await fetch(capturedVideo);
+  //       const videoBlob = await response.blob();
+
+  //       // Check if video size is greater than 1MB
+  //       if (videoBlob.size > 1024 * 1024) {
+  //         // Compress the video Blob using image-conversion
+  //         const compressedVideoBlob = await ImageConversion.compress({
+  //           blob: videoBlob,
+  //           quality: 0.6, // Adjust quality as needed
+  //         });
+
+  //         // Log the size of the compressed video
+  //         console.log("Compressed Video Size:", compressedVideoBlob.size);
+
+  //         formData.append(
+  //           "farmer_statement_video",
+  //           compressedVideoBlob,
+  //           "farmer_statement_video.mp4"
+  //         );
+  //       } else {
+  //         // If video size is less than or equal to 1MB, use the original Blob
+  //         formData.append(
+  //           "farmer_statement_video",
+  //           videoBlob,
+  //           "farmer_statement_video.mp4"
+  //         );
+  //       }
+  //     }
+
+  //     const response = await axios.post("/api/pwa/save", formData, {
+  //       headers: {
+  //         token: token,
+  //         "Content-Type": "multipart/form-data",
+  //       },
+  //     });
+
+  //     if (response.status === 200) {
+  //       console.log("Images and video uploaded successfully");
+  //     } else {
+  //       console.error(
+  //         "Failed to upload. Server returned non-200 status:",
+  //         response.status
+  //       );
+  //     }
+  //   } catch (error) {
+  //     console.error("Error uploading images and video:", error.message);
+  //   } finally {
+  //     onClose();
+  //   }
+  // };
+
+  ////////////////////////////////////////////showing size
+  // const handleSave = async () => {
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append("farmer_id", farmerId);
+  //     formData.append("farmer_field_id", farmerDocId);
+
+  //     if (farmerPhoto) {
+  //       const base64Data = farmerPhoto.split(",")[1];
+  //       const photoBlob = b64toBlob(base64Data);
+  //       formData.append("farmer_photo", photoBlob, "farmer_photo.jpg");
+  //     }
+
+  //     // Handle video if captured
+  //     let capturedVideoFile = null;
+
+  //     if (capturedVideo) {
+  //       // Convert the captured video to a Blob
+  //       const blob = await fetch(capturedVideo).then((res) => res.blob());
+  //       // Create a File object from the Blob
+  //       capturedVideoFile = new File([blob], "farmer_statement_video.mp4");
+
+  //       // Display the video size in kilobytes
+  //       const videoSizeKB = capturedVideoFile.size / 1024;
+  //       console.log(`Video size: ${videoSizeKB.toFixed(2)} KB`);
+
+  //       formData.append("farmer_statement_video", capturedVideoFile);
+  //     }
+
+  //     const response = await axios.post("/api/pwa/save", formData, {
+  //       headers: {
+  //         token: token,
+  //         "Content-Type": "multipart/form-data",
+  //       },
+  //     });
+
+  //     if (response.status === 200) {
+  //       console.log("Images and video uploaded successfully");
+  //     } else {
+  //       console.error(
+  //         "Failed to upload. Server returned non-200 status:",
+  //         response.status
+  //       );
+  //     }
+  //   } catch (error) {
+  //     console.error("Error uploading images and video:", error.message);
+  //   } finally {
+  //     onClose();
+  //   }
+  // };
+
+  //=======================================================>>>vido and omage both working uploaded
+  // const handleSave = async () => {
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append("farmer_id", farmerId);
+  //     formData.append("farmer_field_id", farmerDocId);
+
+  //     if (farmerPhoto) {
+  //       const base64Data = farmerPhoto.split(",")[1];
+  //       const photoBlob = b64toBlob(base64Data);
+  //       formData.append("farmer_photo", photoBlob, "farmer_photo.jpg");
+  //     }
+
+  //     // Handle video if captured
+  //     let capturedVideoFile = null;
+
+  //     if (capturedVideo) {
+  //       // Convert the captured video to a Blob
+  //       const blob = await fetch(capturedVideo).then((res) => res.blob());
+  //       // Create a File object from the Blob
+  //       capturedVideoFile = new File([blob], "farmer_statement_video.mp4");
+  //       formData.append("farmer_statement_video", capturedVideoFile);
+  //     }
+
+  //     const response = await axios.post("/api/pwa/save", formData, {
+  //       headers: {
+  //         token: token,
+  //         "Content-Type": "multipart/form-data",
+  //       },
+  //     });
+
+  //     if (response.status === 200) {
+  //       console.log("Images and video uploaded successfully");
+  //     } else {
+  //       console.error(
+  //         "Failed to upload. Server returned non-200 status:",
+  //         response.status
+  //       );
+  //     }
+  //   } catch (error) {
+  //     console.error("Error uploading images and video:", error.message);
+  //   } finally {
+  //     onClose();
+  //   }
+  // };
+
+  /////////////////////////////////////////////below one is good working
+
+  // const handleSave = async () => {
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append("farmer_id", farmerId);
+  //     formData.append("farmer_field_id", farmerDocId);
+
+  //     if (farmerPhoto) {
+  //       const base64Data = farmerPhoto.split(",")[1];
+  //       const photoBlob = b64toBlob(base64Data);
+  //       formData.append("farmer_photo", photoBlob, "farmer_photo.jpg");
+  //     }
+
+  //     // Handle video if captured
+  //     if (capturedVideo) {
+  //       // Create a Blob from the video URL
+  //       const response = await fetch(capturedVideo);
+  //       const videoBlob = await response.blob();
+
+  //       // Compress the video Blob
+  //       const compressedVideoBlob = await new Compressor(videoBlob, {
+  //         quality: 0.6, // Adjust quality as needed
+  //         success(result) {
+  //           formData.append("captured_video", result, "captured_video.mp4");
+  //         },
+  //         error(err) {
+  //           console.error("Video compression failed:", err.message);
+  //         },
+  //       });
+  //     }
+
+  //     const response = await axios.post("/api/pwa/save", formData, {
+  //       headers: {
+  //         token: token,
+  //         "Content-Type": "multipart/form-data",
+  //       },
+  //     });
+
+  //     if (response.status === 200) {
+  //       console.log("Images and video uploaded successfully");
+  //     } else {
+  //       console.error(
+  //         "Failed to upload. Server returned non-200 status:",
+  //         response.status
+  //       );
+  //     }
+  //   } catch (error) {
+  //     console.error("Error uploading images and video:", error.message);
+  //   } finally {
+  //     onClose();
+  //   }
+  // };
+
+  // Helper function to convert base64 to Blob
+  const b64toBlob = (base64Data) => {
+    const byteCharacters = atob(base64Data);
+    const byteArrays = [];
+
+    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+      const slice = byteCharacters.slice(offset, offset + 512);
+
+      const byteNumbers = new Array(slice.length);
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+
+    return new Blob(byteArrays, { type: "image/jpeg" });
+  };
   return (
     <>
       <PopupFormContainer>
@@ -704,8 +1083,7 @@ const PopupForm = ({
 
 export default PopupForm;
 
-/////////////////////old okay with image////////////
-
+/////////////////////////////////////////////////////////////////////////////old
 // import React, { useState, useEffect } from "react";
 // import Camera from "react-html5-camera-photo";
 // import "react-html5-camera-photo/build/css/index.css";
@@ -749,12 +1127,12 @@ export default PopupForm;
 //   border-radius: 8px;
 //   width: 400px;
 //   color: black;
-//   margin-top: 1180px;
+//   margin-top: 1656px;
 //   margin-bottom: 200px;
 // `;
 
 // const Button = styled.button`
-//   background-color: #3498db;
+//   background-color: #17acef;
 //   color: white;
 //   padding: 8px;
 //   border: none;
@@ -782,6 +1160,7 @@ export default PopupForm;
 //   farmerNameTitle,
 //   farmerFather,
 //   farmerName,
+//   farmerDocId,
 // }) => {
 //   const [capturedImage, setCapturedImage] = useState(null);
 //   const [showCamera, setShowCamera] = useState(false);
@@ -1155,12 +1534,15 @@ export default PopupForm;
 //   ]);
 
 //   //server connection
+//   //   console.log(farmerId);
+//   // console.log(farmerDocId)
+//   console.log(token);
 
 //   const handleSave = async () => {
 //     try {
 //       const formData = new FormData();
 //       formData.append("farmer_id", farmerId);
-//       formData.append("farmer_field_id", farmerFieldId);
+//       formData.append("farmer_field_id", farmerDocId);
 
 //       // Convert the data URI to a Blob and append to form data if not null or empty
 //       if (farmerPhoto) {
@@ -1228,15 +1610,15 @@ export default PopupForm;
 //         );
 //       }
 
-// if (farmerPipeImage) {
-//   const base64Data = farmerPipeImage.split(",")[1];
-//   const blob = b64toBlob(base64Data);
-//   formData.append(
-//     "farmer_post_inspection_photo_with_pipe",
-//     blob,
-//     "farmer_post_inspection_photo_with_pipe.jpg"
-//   );
-// }
+//       if (farmerPipeImage) {
+//         const base64Data = farmerPipeImage.split(",")[1];
+//         const blob = b64toBlob(base64Data);
+//         formData.append(
+//           "farmer_post_inspection_photo_with_pipe",
+//           blob,
+//           "farmer_post_inspection_photo_with_pipe.jpg"
+//         );
+//       }
 
 //       if (statementImage) {
 //         const base64Data = statementImage.split(",")[1];
@@ -1248,16 +1630,11 @@ export default PopupForm;
 //         );
 //       }
 
-// const response = await axios.post(
-//   "https://sfamsserver.in/api/admin/farmer-doc/save",
-//   formData,
-//   {
-//     headers: {
-//       device_uuid: device_uuid,
-//       token: token,
-//     },
-//   }
-// );
+//       const response = await axios.post("apiurl", formData, {
+//         headers: {
+//           token: token,
+//         },
+//       });
 
 //       console.log("Images uploaded successfully");
 //     } catch (error) {
